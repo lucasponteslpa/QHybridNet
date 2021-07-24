@@ -39,7 +39,7 @@ if use_pad:
     data_val = pad(data_val)
 res_dir = 'results'
 make_dirs(res_dir)
-qmodel = QuantumInput((data_train, labels_train),(data_val, labels_val),list(range(10)), 8,4)
+qmodel = QuantumInput((data_train, labels_train),(data_val, labels_val),list(range(10)),4)
 qmodel.training(batch_size=8, epochs=1)
 np.save(os.path.join(res_dir,'train_loss'),qmodel.train.history['loss'])
 np.save(os.path.join(res_dir,'train_acc'),qmodel.train.history['accuracy'])

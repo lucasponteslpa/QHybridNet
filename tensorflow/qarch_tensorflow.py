@@ -3,7 +3,7 @@ import sympy
 from tqdm import tqdm
 import tensorflow as tf
 import tensorflow_quantum as tfq
-from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
 import numpy as np
 from utils import ctrl_bin, accuracy
 
@@ -188,21 +188,21 @@ class HermitianLabels():
 
 
 class QuantumInput(HermitianLabels):
-    def __init__(self, train, val, classes, n_qubits, n_layers):
-        super().__init__(classes, n_qubits)
+    def __init__(self, train, val, classes, n_layers, pca_dim = 32):
+        super().__init__(classes, int(np.log2(pca_dim)))
         self.n_classes = len(classes)
-        self.n_qubits = n_qubits
         self.n_layers = n_layers
 
-        n = len(classes) * (n_qubits+1)
+        n = len(classes) * (self.n_qubits+1)
 
-        self.qubits = [cirq.GridQubit(0,j) for j in range(n_qubits)]
+        self.qubits = [cirq.GridQubit(0,j) for j in range(self.n_qubits)]
 
         self.measurement = [cirq.Z(self.qubits[j]) for j in range(self.n_qubits)]
 
 
         # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
-        self.X_train, self.X_test, self.y_train, self.y_test = train[0], val[0], train[1], val[1]
+        pca = PCA(n_components=pca_dim)
+        self.X_train, self.X_test, self.y_train, self.y_test = pca.fit_transform(train[0]), pca.fit_transform(val[0]), train[1], val[1]
 
         quantum_input, quantum_input_labels = self.build_data_circuits(self.X_train, self.y_train,v=False)
         val_input, val_labels = self.build_data_circuits(self.X_test, self.y_test, len(classes))
@@ -277,28 +277,6 @@ class QuantumInput(HermitianLabels):
                                     verbose=1,
                                     validation_data=(self.quantum_val_tensor,
                                                      self.quantum_val_labels))
-
-    def validate_model(self):
-        symbols_dic = {}
-        alpha_params = self.model.weights[0].numpy()
-        for k in range(self.n_classes):
-            for i in range(self.n_qubits+1):
-                symbols_dic['theta' + '_' + str(i)+str(k)] = alpha_params[k*(self.n_qubits+1)+i]
-        results = []
-        get_z_results = lambda v: np.array([v_i[0] if v_i[0] == 1 else -1 for v_i in v])
-        #for i in range(0,len(self.quantum_input), self.n_classes):
-        z_meas = [cirq.measure(zq, key='m'+str(i)) for i,zq in enumerate(self.readout)]
-        simulator = cirq.Simulator()
-        circuit_val = cirq.Circuit()
-        for i in range(self.n_classes):
-            circuit_val = circuit_val + self.quantum_input[i]
-        resolver = cirq.ParamResolver(symbols_dic)
-        circuit_val = circuit_val + self.quantum_model_circuit
-        circuit_val.append(z_meas)
-        result = simulator.run(circuit_val, resolver, repetitions=5000)
-        res = {key:get_z_results(r) for key,r in result.measurements.items()}
-        res = [m.sum()/m.shape[0] for _,m in res.items()]
-        return res
 
 
 
