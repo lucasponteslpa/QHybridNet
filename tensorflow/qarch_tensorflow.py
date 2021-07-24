@@ -202,7 +202,8 @@ class QuantumInput(HermitianLabels):
 
         # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
         pca = PCA(n_components=pca_dim)
-        self.X_train, self.X_test, self.y_train, self.y_test = pca.fit_transform(train[0]), pca.fit_transform(val[0]), train[1], val[1]
+        pca_data = pca.fit_transform(np.concatenate((train[0], val[0])))
+        self.X_train, self.X_test, self.y_train, self.y_test = pca_data[:train[0].shape[0]], pca_data[train[0].shape[0]:], train[1], val[1]
 
         quantum_input, quantum_input_labels = self.build_data_circuits(self.X_train, self.y_train,v=False)
         val_input, val_labels = self.build_data_circuits(self.X_test, self.y_test, len(classes))
