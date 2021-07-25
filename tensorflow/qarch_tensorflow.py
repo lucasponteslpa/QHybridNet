@@ -6,7 +6,7 @@ import tensorflow_quantum as tfq
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
 import numpy as np
-from utils import ctrl_bin, accuracy
+from utils import ctrl_bin
 
 class QInputCircuit():
     def __init__(self, vector, qubits):
@@ -16,14 +16,15 @@ class QInputCircuit():
         self.n_qu = int(np.log2(len(self.v_state)))
         self.circuit = cirq.Circuit()
 
-    def make_circuit(self):
+    def make_circuit(self, num_reps = 1):
         alphas = self.get_alphas()
-        gate_op = cirq.ry(alphas[0][0])
-        self.circuit.append([gate_op.on(self.qu[0])])
-        for i, angles in enumerate(alphas[1:],1):
-            self._load_multiplexer_angles(angles, 0, len(angles), False)
-            self._total_multiplexer(angles, list(range(i+1)))
-            self.circuit.append([cirq.CNOT(self.qu[0],self.qu[i])])
+        for _ in range(num_reps):
+            gate_op = cirq.ry(alphas[0][0])
+            self.circuit.append([gate_op.on(self.qu[0])])
+            for i, angles in enumerate(alphas[1:],1):
+                self._load_multiplexer_angles(angles, 0, len(angles), False)
+                self._total_multiplexer(angles, list(range(i+1)))
+                self.circuit.append([cirq.CNOT(self.qu[0],self.qu[i])])
 
         return self.circuit
 
@@ -189,7 +190,7 @@ class HermitianLabels():
 
 
 class QuantumInput(HermitianLabels):
-    def __init__(self, train, val, classes, n_layers, pca_dim = 32, num_measurements = None):
+    def __init__(self, train, val, classes, n_layers, pca_dim = 32, num_measurements = None, layer_type=0):
         super().__init__(classes, int(np.log2(pca_dim)))
         self.n_classes = len(classes)
         self.n_layers = n_layers
@@ -215,8 +216,9 @@ class QuantumInput(HermitianLabels):
 
         self.quantum_val_labels = tf.convert_to_tensor(np.array(val_labels))
         self.quantum_val_tensor = tfq.convert_to_tensor(val_input)
+        #import pdb;pdb.set_trace()
 
-        self.quantum_model_circuit = QMCModel(self.qubits, n_layers=self.n_layers, layer_type=1).circuit
+        self.quantum_model_circuit = QMCModel(self.qubits, n_layers=self.n_layers, layer_type=layer_type).circuit
         differentiator = tfq.differentiators.ParameterShift()
         self.expectation_layer = tfq.layers.PQC(self.quantum_model_circuit,
                                            operators=self.measurement,
@@ -231,7 +233,7 @@ class QuantumInput(HermitianLabels):
         with tqdm(total=y.shape[0]) as t:
             for i, sample in enumerate(X):
                 quantum_input_circuit = QInputCircuit(sample, self.qubits)
-                quantum_circuit = quantum_input_circuit.make_circuit()
+                quantum_circuit = quantum_input_circuit.make_circuit(num_reps=1)
                 quantum_input = quantum_input + [quantum_circuit]
                 one_hot_label = np.zeros(self.n_classes)
                 one_hot_label[int(y[i])] = 1.0
@@ -260,7 +262,7 @@ class QuantumInput(HermitianLabels):
             q_data_input,
             # The PQC layer returns the expected value of the readout gate, range [-1,1].
             self.expectation_layer,
-            tf.keras.layers.Dense(10, activation="sigmoid")
+            tf.keras.layers.Dense(2, activation="sigmoid")
         ])
 
         # Optimizer for update parameters of the 'quantum model'
