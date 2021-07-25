@@ -190,7 +190,7 @@ class HermitianLabels():
 
 
 class QuantumInput(HermitianLabels):
-    def __init__(self, train, val, classes, n_layers, pca_dim = 32, num_measurements = None, layer_type=0):
+    def __init__(self, train, val, classes, n_layers, pca_dim = None, num_measurements = None, layer_type=0):
         super().__init__(classes, int(np.log2(pca_dim)))
         self.n_classes = len(classes)
         self.n_layers = n_layers
@@ -203,8 +203,11 @@ class QuantumInput(HermitianLabels):
 
 
         # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
-        pca = PCA(n_components=pca_dim)
-        pca_data = pca.fit_transform(np.concatenate((train[0], val[0])))
+        if pca_dim != None:
+            pca = PCA(n_components=pca_dim)
+            pca_data = pca.fit_transform(np.concatenate((train[0], val[0])))
+        else:
+            pca_data = np.concatenate((train[0], val[0]))
         pca_data = normalize(pca_data, norm='l2')
         self.X_train, self.X_test, self.y_train, self.y_test = pca_data[:train[0].shape[0]], pca_data[train[0].shape[0]:], train[1], val[1]
 
