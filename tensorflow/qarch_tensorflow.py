@@ -4,6 +4,7 @@ from tqdm import tqdm
 import tensorflow as tf
 import tensorflow_quantum as tfq
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import normalize
 import numpy as np
 from utils import ctrl_bin, accuracy
 
@@ -188,21 +189,22 @@ class HermitianLabels():
 
 
 class QuantumInput(HermitianLabels):
-    def __init__(self, train, val, classes, n_layers, pca_dim = 32):
+    def __init__(self, train, val, classes, n_layers, pca_dim = 32, num_measurements = None):
         super().__init__(classes, int(np.log2(pca_dim)))
         self.n_classes = len(classes)
         self.n_layers = n_layers
 
-        n = len(classes) * (self.n_qubits+1)
-
         self.qubits = [cirq.GridQubit(0,j) for j in range(self.n_qubits)]
-
-        self.measurement = [cirq.Z(self.qubits[j]) for j in range(self.n_qubits)]
+        if num_measurements == None or num_measurements>self.n_qubits:
+            self.measurement = [cirq.Z(self.qubits[j]) for j in range(self.n_qubits)]
+        else:
+            self.measurement = [cirq.Z(self.qubits[j]) for j in range(num_measurements)]
 
 
         # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
         pca = PCA(n_components=pca_dim)
         pca_data = pca.fit_transform(np.concatenate((train[0], val[0])))
+        pca_data = normalize(pca_data, norm='l2')
         self.X_train, self.X_test, self.y_train, self.y_test = pca_data[:train[0].shape[0]], pca_data[train[0].shape[0]:], train[1], val[1]
 
         quantum_input, quantum_input_labels = self.build_data_circuits(self.X_train, self.y_train,v=False)
@@ -239,7 +241,7 @@ class QuantumInput(HermitianLabels):
         return quantum_input, quantum_input_labels
 
 
-    def training(self, batch_size = 4, epochs=100):
+    def training(self, batch_size = 4, epochs=100, steps_decay=5):
 
         # TFQ differentiator
         #differentiator = tfq.differentiators.ParameterShift()
@@ -262,7 +264,8 @@ class QuantumInput(HermitianLabels):
         ])
 
         # Optimizer for update parameters of the 'quantum model'
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+        lr_sched = tf.keras.optimizers.schedules.ExponentialDecay(1e-2, steps_decay, 0.9)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_sched)
 
         # Loss of the keras model
         # loss = tf.keras.losses.MeanSquaredError()
