@@ -191,7 +191,7 @@ class HermitianLabels():
 
 class QuantumInput(HermitianLabels):
     def __init__(self, train, val, classes, n_layers, pca_dim = None, num_measurements = None, layer_type=0):
-        super().__init__(classes, int(np.log2(pca_dim)))
+        super().__init__(classes, int(np.log2(pca_dim if pca_dim else train[0].shape[1])))
         self.n_classes = len(classes)
         self.n_layers = n_layers
 
@@ -265,7 +265,7 @@ class QuantumInput(HermitianLabels):
             q_data_input,
             # The PQC layer returns the expected value of the readout gate, range [-1,1].
             self.expectation_layer,
-            tf.keras.layers.Dense(2, activation="sigmoid")
+            tf.keras.layers.Dense(self.n_classes, activation="sigmoid")
         ])
 
         # Optimizer for update parameters of the 'quantum model'
