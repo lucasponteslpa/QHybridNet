@@ -215,7 +215,7 @@ class QuantumInput(HermitianLabels):
             if pca_type == "default":
                 pca = PCA(n_components=pca_dim)
             elif pca_type == "kernel":
-                pca = KernelPCA(n_components=pca_dim)
+                pca = KernelPCA(n_components=pca_dim, kernel='rbf', eigen_solver='arpack')
             else:
                 pca = SparsePCA(n_components=pca_dim)
             pca_data = pca.fit_transform(np.concatenate((train[0], val[0])))
