@@ -4,7 +4,7 @@ from tqdm import tqdm
 import tensorflow as tf
 import tensorflow_quantum as tfq
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, StandardScaler
 import numpy as np
 from utils import ctrl_bin
 
@@ -208,6 +208,8 @@ class QuantumInput(HermitianLabels):
             pca_data = pca.fit_transform(np.concatenate((train[0], val[0])))
         else:
             pca_data = np.concatenate((train[0], val[0]))
+        scaler = StandardScaler().fit(pca_data)
+        pca_data = scaler.transform(pca_data)
         pca_data = normalize(pca_data, norm='l2')
         self.X_train, self.X_test, self.y_train, self.y_test = pca_data[:train[0].shape[0]], pca_data[train[0].shape[0]:], train[1], val[1]
 
