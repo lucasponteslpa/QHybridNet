@@ -3,7 +3,7 @@ import sympy
 from tqdm import tqdm
 import tensorflow as tf
 import tensorflow_quantum as tfq
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, KernelPCA, SparsePCA
 from sklearn.preprocessing import normalize, StandardScaler
 import numpy as np
 from utils import ctrl_bin
@@ -190,7 +190,15 @@ class HermitianLabels():
 
 
 class QuantumInput(HermitianLabels):
-    def __init__(self, train, val, classes, n_layers, pca_dim = None, num_measurements = None, layer_type=0):
+    def __init__(self,
+                 train,
+                 val,
+                 classes,
+                 n_layers,
+                 pca_dim = None,
+                 num_measurements = None,
+                 layer_type=0,
+                 pca_type = "default"):
         super().__init__(classes, int(np.log2(pca_dim if pca_dim else train[0].shape[1])))
         self.n_classes = len(classes)
         self.n_layers = n_layers
@@ -204,7 +212,12 @@ class QuantumInput(HermitianLabels):
 
         # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
         if pca_dim != None:
-            pca = PCA(n_components=pca_dim)
+            if pca_type == "default":
+                pca = PCA(n_components=pca_dim)
+            elif pca_type == "kernel":
+                pca = KernelPCA(n_components=pca_dim)
+            else:
+                pca = SparsePCA(n_components=pca_dim)
             pca_data = pca.fit_transform(np.concatenate((train[0], val[0])))
         else:
             pca_data = np.concatenate((train[0], val[0]))
