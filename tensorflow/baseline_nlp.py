@@ -71,16 +71,19 @@ elif arch_type == 3:
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
 model.compile(optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 #pca_data = pca.fit_transform(np.concatenate((data_train, data_val)))
-pca_data = np.expand_dims(np.concatenate((data_train[:,:512], data_val[:,:512])),axis=2)
+if arch_type == 3:
+    pca_data = np.expand_dims(np.concatenate((data_train[:5000,:512], data_val[:1500,:512])),axis=2)
+else:
+    pca_data = np.expand_dims(np.concatenate((data_train[:5000,:512], data_val[:1500,:512])),axis=2)
 #scaler = preprocessing.StandardScaler().fit(pca_data)
 #pca_data = scaler.transform(pca_data)
 #pca_data = preprocessing.normalize(pca_data, norm='l2')
-train = model.fit(x=pca_data[:data_train.shape[0]],
+train = model.fit(x=pca_data[:5000],
                   y=labels_train,
                   epochs=5,
                   batch_size=16,
                   verbose=1,
-                  validation_data=(pca_data[data_train.shape[0]:],labels_val))
+                  validation_data=(pca_data[5000:],labels_val))
 print(model.summary())
 np.save(os.path.join(res_dir,'train_loss'),train.history['loss'])
 np.save(os.path.join(res_dir,'train_acc'),train.history['accuracy'])
