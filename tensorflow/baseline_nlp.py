@@ -4,10 +4,13 @@ import os
 import numpy as np
 import sys
 
-def load_hot_labels(labels):
+from tensorflow.keras import layers
+from tensorflow.python.keras.layers.core import Flatten
+
+def load_hot_labels(labels, n_class):
     out_labels = []
     for y in labels:
-        one_hot_labels = np.zeros(10)
+        one_hot_labels = np.zeros(n_class)
         one_hot_labels[int(y)] = 1.0
         out_labels.append(one_hot_labels)
 
@@ -46,26 +49,39 @@ else:
 if use_pad:
     data_train = pad(data_train)
     data_val = pad(data_val)
-
+n_class = 10
 pca = decomposition.PCA(n_components=512)
-labels_train = load_hot_labels(labels_train)
-labels_val = load_hot_labels(labels_val)
+labels_train = load_hot_labels(labels_train, n_class)
+labels_val = load_hot_labels(labels_val, n_class)
 res_dir = 'results_baseline_nlp'
 make_dirs(res_dir)
-model = tf.keras.Sequential([tf.keras.layers.Dense(10,activation="sigmoid")])
+arch_type = 3
+if arch_type == 0:
+    model = tf.keras.Sequential([tf.keras.layers.Dense(n_class,activation="sigmoid")])
+elif arch_type == 1:
+    model = tf.keras.Sequential([tf.keras.layers.Dense(1,activation="relu"),
+                                 tf.keras.layers.Dense(n_class,activation="sigmoid")])
+elif arch_type == 2:
+    model = tf.keras.Sequential([tf.keras.layers.Dense(2,activation="relu"),
+                                 tf.keras.layers.Dense(n_class,activation="sigmoid")])
+elif arch_type == 3:
+    model = tf.keras.Sequential([tf.keras.layers.Conv1D(1, 64, strides=64, activation="relu"),
+                                 tf.keras.layers.Flatten(),
+                                 tf.keras.layers.Dense(n_class,activation="sigmoid")])
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
 model.compile(optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
-pca_data = pca.fit_transform(np.concatenate((data_train, data_val)))
-#pca_data = np.concatenate((data_train, data_val))
-scaler = preprocessing.StandardScaler().fit(pca_data)
-pca_data = scaler.transform(pca_data)
-pca_data = preprocessing.normalize(pca_data, norm='l2')
+#pca_data = pca.fit_transform(np.concatenate((data_train, data_val)))
+pca_data = np.expand_dims(np.concatenate((data_train[:,:512], data_val[:,:512])),axis=2)
+#scaler = preprocessing.StandardScaler().fit(pca_data)
+#pca_data = scaler.transform(pca_data)
+#pca_data = preprocessing.normalize(pca_data, norm='l2')
 train = model.fit(x=pca_data[:data_train.shape[0]],
                   y=labels_train,
-                  epochs=50,
+                  epochs=5,
                   batch_size=16,
                   verbose=1,
                   validation_data=(pca_data[data_train.shape[0]:],labels_val))
+print(model.summary())
 np.save(os.path.join(res_dir,'train_loss'),train.history['loss'])
 np.save(os.path.join(res_dir,'train_acc'),train.history['accuracy'])
 np.save(os.path.join(res_dir,'val_loss'),train.history['val_loss'])
