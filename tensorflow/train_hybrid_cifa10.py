@@ -39,8 +39,8 @@ if use_pad:
     data_val = pad(data_val)
 res_dir = 'results'
 make_dirs(res_dir)
-qmodel = QuantumInput((data_train[:10000,:512], labels_train[:10000]),
-                      (data_val[:2000,:512], labels_val[:2000]),
+qmodel = QuantumInput((data_train[:1000,:512], labels_train[:1000]),
+                      (data_val[:250,:512], labels_val[:250]),
                       list(range(2)),
                       5,
                       pca_dim=None,

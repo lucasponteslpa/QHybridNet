@@ -100,14 +100,13 @@ class CircuitClassModelBuilder():
 
     def add_layer(self, prefix):
         if self.layer_type == 0:
-            symbol_bias = sympy.Symbol(prefix +'_lambda')
             for i in range(0, len(self.qubits)-1, 2):
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
             for i in range(1, len(self.qubits)-1, 2):
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
             for i, qubit in enumerate(self.qubits):
                 symbol = sympy.Symbol(prefix + '_' + str(i))
-                gate_ry = cirq.ry(symbol+symbol_bias)
+                gate_ry = cirq.ry(symbol)
                 self.circuit.append([gate_ry.on(qubit)])
         else:
             symbol_bias = sympy.Symbol(prefix +'_lambda')
@@ -115,19 +114,22 @@ class CircuitClassModelBuilder():
                 symbol_y = sympy.Symbol(prefix +'_eRy' + str(i))
                 symbol_z = sympy.Symbol(prefix +'_eRz' + str(i))
                 gate_ry = cirq.ry(symbol_y+symbol_bias)
-                gate_rz = cirq.rz(symbol_z+symbol_bias)
+                #gate_rz = cirq.rz(symbol_z+symbol_bias)
+                gate_rz = cirq.rz(symbol_bias)
                 self.circuit.append([gate_ry.on(qubit), gate_rz.on(qubit)])
             for i in range(0, len(self.qubits)-1, 2):
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
             for i in range(1, len(self.qubits)-1, 2):
                 symbol_y0 = sympy.Symbol(prefix +'_oRy' + str(i))
-                symbol_z0 = sympy.Symbol(prefix +'_oRz' + str(i))
+                #symbol_z0 = sympy.Symbol(prefix +'_oRz' + str(i))
                 symbol_y1 = sympy.Symbol(prefix +'_oRy' + str(i+1))
-                symbol_z1 = sympy.Symbol(prefix +'_oRz' + str(i+1))
+                #symbol_z1 = sympy.Symbol(prefix +'_oRz' + str(i+1))
                 gate_ry0 = cirq.ry(symbol_y0+symbol_bias)
-                gate_rz0 = cirq.rz(symbol_z0+symbol_bias)
+                #gate_rz0 = cirq.rz(symbol_z0+symbol_bias)
+                gate_rz0 = cirq.rz(symbol_bias)
                 gate_ry1 = cirq.ry(symbol_y1+symbol_bias)
-                gate_rz1 = cirq.rz(symbol_z1+symbol_bias)
+                #gate_rz1 = cirq.rz(symbol_z1+symbol_bias)
+                gate_rz1 = cirq.rz(symbol_bias)
                 self.circuit.append([gate_ry0.on(self.qubits[i]),gate_rz0.on(self.qubits[i]),
                                      gate_ry1.on(self.qubits[i+1]),gate_rz1.on(self.qubits[i+1]),
                                      cirq.CNOT(self.qubits[i], self.qubits[i+1])])
