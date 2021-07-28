@@ -1,5 +1,7 @@
 from qarch_tensorflow import QuantumInput
 from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_digits
 import os
 import numpy as np
 import sys
@@ -22,6 +24,9 @@ if len(sys.argv)==2:
         labels_train = np.load('../cifar10_mobilenetv2_features/train/labels.npy')
         data_val = np.load('../cifar10_mobilenetv2_features/val/data.npy')
         labels_val = np.load('../cifar10_mobilenetv2_features/val/labels.npy')
+    elif sys.argv[1]=='digits':
+        data, labels = load_digits(n_class=10, return_X_y=True)
+        data_train, data_val, labels_train, labels_val = train_test_split(data, labels, test_size=0.3)
     else:
         data_train = np.load('../mnist_features/train/data.npy')
         labels_train = np.load('../mnist_features/train/labels.npy')
@@ -39,13 +44,22 @@ if use_pad:
     data_val = pad(data_val)
 res_dir = 'results'
 make_dirs(res_dir)
-qmodel = QuantumInput((data_train[:1000,:512], labels_train[:1000]),
-                      (data_val[:250,:512], labels_val[:250]),
-                      list(range(2)),
-                      5,
-                      pca_dim=None,
-                      num_measurements = None,
-                      layer_type=1)
+if sys.argv!='digits':
+    qmodel = QuantumInput((data_train[:1000,:512], labels_train[:1000]),
+                        (data_val[:250,:512], labels_val[:250]),
+                        list(range(2)),
+                        5,
+                        pca_dim=None,
+                        num_measurements = None,
+                        layer_type=1)
+else:
+    qmodel = QuantumInput((data_train, labels_train),
+                          (data_val, labels_val),
+                          list(range(10)),
+                          5,
+                          pca_dim=None,
+                          num_measurements = None,
+                          layer_type=1)
 qmodel.training(batch_size=8, epochs=15, lr=1e-2)
 np.save(os.path.join(res_dir,'train_loss'),qmodel.train.history['loss'])
 np.save(os.path.join(res_dir,'train_acc'),qmodel.train.history['accuracy'])

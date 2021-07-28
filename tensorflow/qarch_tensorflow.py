@@ -96,6 +96,7 @@ class CircuitClassModelBuilder():
     def __init__(self, qubits, layer_type=0):
         self.qubits = qubits
         self.layer_type = layer_type
+        self.theta_symbols = []
         self.circuit = cirq.Circuit()
 
     def add_layer(self, prefix):
@@ -106,30 +107,33 @@ class CircuitClassModelBuilder():
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
             for i, qubit in enumerate(self.qubits):
                 symbol = sympy.Symbol(prefix + '_' + str(i))
+                self.theta_symbols.append(symbol)
                 gate_ry = cirq.ry(symbol)
                 self.circuit.append([gate_ry.on(qubit)])
         else:
-            symbol_bias = sympy.Symbol(prefix +'_lambda')
             for i, qubit in enumerate(self.qubits):
                 symbol_y = sympy.Symbol(prefix +'_eRy' + str(i))
+                self.theta_symbols.append(symbol_y)
                 symbol_z = sympy.Symbol(prefix +'_eRz' + str(i))
-                gate_ry = cirq.ry(symbol_y+symbol_bias)
-                #gate_rz = cirq.rz(symbol_z+symbol_bias)
-                gate_rz = cirq.rz(symbol_bias)
+                self.theta_symbols.append(symbol_z)
+                gate_ry = cirq.ry(symbol_y)
+                gate_rz = cirq.rz(symbol_z)
                 self.circuit.append([gate_ry.on(qubit), gate_rz.on(qubit)])
             for i in range(0, len(self.qubits)-1, 2):
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
             for i in range(1, len(self.qubits)-1, 2):
                 symbol_y0 = sympy.Symbol(prefix +'_oRy' + str(i))
-                #symbol_z0 = sympy.Symbol(prefix +'_oRz' + str(i))
+                self.theta_symbols.append(symbol_y0)
+                symbol_z0 = sympy.Symbol(prefix +'_oRz' + str(i))
+                self.theta_symbols.append(symbol_z0)
                 symbol_y1 = sympy.Symbol(prefix +'_oRy' + str(i+1))
-                #symbol_z1 = sympy.Symbol(prefix +'_oRz' + str(i+1))
-                gate_ry0 = cirq.ry(symbol_y0+symbol_bias)
-                #gate_rz0 = cirq.rz(symbol_z0+symbol_bias)
-                gate_rz0 = cirq.rz(symbol_bias)
-                gate_ry1 = cirq.ry(symbol_y1+symbol_bias)
-                #gate_rz1 = cirq.rz(symbol_z1+symbol_bias)
-                gate_rz1 = cirq.rz(symbol_bias)
+                self.theta_symbols.append(symbol_y1)
+                symbol_z1 = sympy.Symbol(prefix +'_oRz' + str(i+1))
+                self.theta_symbols.append(symbol_z1)
+                gate_ry0 = cirq.ry(symbol_y0)
+                gate_rz0 = cirq.rz(symbol_z0)
+                gate_ry1 = cirq.ry(symbol_y1)
+                gate_rz1 = cirq.rz(symbol_z1)
                 self.circuit.append([gate_ry0.on(self.qubits[i]),gate_rz0.on(self.qubits[i]),
                                      gate_ry1.on(self.qubits[i+1]),gate_rz1.on(self.qubits[i+1]),
                                      cirq.CNOT(self.qubits[i], self.qubits[i+1])])
@@ -140,11 +144,6 @@ class CircuitClassModelBuilder():
             gate_n = cirq.rz(-symbol/2)
             self.circuit.append([gate_p.on(qubit), cirq.CNOT(ctrl_qubit, qubit),
                                  gate_n.on(qubit), cirq.CNOT(ctrl_qubit, qubit)])
-
-
-
-
-
 
 class QMCModel(CircuitClassModelBuilder):
     def __init__(self, qubits, n_layers, layer_type=0):
@@ -159,38 +158,6 @@ class HermitianLabels():
     def __init__(self, classes, n_qubits) -> None:
         self.classes = classes
         self.n_qubits = n_qubits
-        self.base_hermitians = {'0':np.array([[1.0,0.0],
-                                              [0.0,0.0]]),
-                                '1':np.array([[0.0,0.0],
-                                              [0.0,1.0]])}
-        self.labels_encoding = self.load_label_encoding()
-        self.label_hermitian, self.Ys = self.load_label_state(self.base_hermitians, self.labels_encoding)
-
-    def load_label_state(self, hermitians, labels_encoding):
-        l_states = {}
-        Ys_coefs = {}
-        for i, dict in enumerate(labels_encoding.items()):
-            l, e = dict
-            b = hermitians[e[0]]
-            Ys = np.ones(len(labels_encoding))*1/4
-            Ys[i] = 1.0
-            for j in e[1:]: # e is a binary string
-                b = np.kron(b,hermitians[j])
-            Ys_coefs[l] = Ys
-            l_states[l] = b
-
-        return l_states, Ys_coefs
-
-    def load_label_encoding(self):
-        labels_encoding = {}
-        for i,c in enumerate(self.classes):
-            s = "{0:b}".format(i)
-            for _ in range(self.n_qubits - len(s)):
-                s = '0' + s
-            labels_encoding[c] = s
-
-        return labels_encoding
-
 
 
 class QuantumInput(HermitianLabels):
