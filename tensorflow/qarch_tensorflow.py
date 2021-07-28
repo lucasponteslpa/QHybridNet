@@ -100,20 +100,22 @@ class CircuitClassModelBuilder():
 
     def add_layer(self, prefix):
         if self.layer_type == 0:
+            symbol_bias = sympy.Symbol(prefix +'_lambda')
             for i in range(0, len(self.qubits)-1, 2):
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
             for i in range(1, len(self.qubits)-1, 2):
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
             for i, qubit in enumerate(self.qubits):
                 symbol = sympy.Symbol(prefix + '_' + str(i))
-                gate_ry = cirq.ry(symbol)
+                gate_ry = cirq.ry(symbol+symbol_bias)
                 self.circuit.append([gate_ry.on(qubit)])
         else:
+            symbol_bias = sympy.Symbol(prefix +'_lambda')
             for i, qubit in enumerate(self.qubits):
                 symbol_y = sympy.Symbol(prefix +'_eRy' + str(i))
                 symbol_z = sympy.Symbol(prefix +'_eRz' + str(i))
-                gate_ry = cirq.ry(symbol_y)
-                gate_rz = cirq.rz(symbol_z)
+                gate_ry = cirq.ry(symbol_y+symbol_bias)
+                gate_rz = cirq.rz(symbol_z+symbol_bias)
                 self.circuit.append([gate_ry.on(qubit), gate_rz.on(qubit)])
             for i in range(0, len(self.qubits)-1, 2):
                 self.circuit.append([cirq.CNOT(self.qubits[i], self.qubits[i+1])])
@@ -122,10 +124,10 @@ class CircuitClassModelBuilder():
                 symbol_z0 = sympy.Symbol(prefix +'_oRz' + str(i))
                 symbol_y1 = sympy.Symbol(prefix +'_oRy' + str(i+1))
                 symbol_z1 = sympy.Symbol(prefix +'_oRz' + str(i+1))
-                gate_ry0 = cirq.ry(symbol_y0)
-                gate_rz0 = cirq.rz(symbol_z0)
-                gate_ry1 = cirq.ry(symbol_y1)
-                gate_rz1 = cirq.rz(symbol_z1)
+                gate_ry0 = cirq.ry(symbol_y0+symbol_bias)
+                gate_rz0 = cirq.rz(symbol_z0+symbol_bias)
+                gate_ry1 = cirq.ry(symbol_y1+symbol_bias)
+                gate_rz1 = cirq.rz(symbol_z1+symbol_bias)
                 self.circuit.append([gate_ry0.on(self.qubits[i]),gate_rz0.on(self.qubits[i]),
                                      gate_ry1.on(self.qubits[i+1]),gate_rz1.on(self.qubits[i+1]),
                                      cirq.CNOT(self.qubits[i], self.qubits[i+1])])
@@ -261,7 +263,7 @@ class QuantumInput(HermitianLabels):
         return quantum_input, quantum_input_labels
 
 
-    def training(self, batch_size = 4, epochs=100, steps_decay=5):
+    def training(self, batch_size = 4, epochs=100, steps_decay=5, lr=1e-2):
 
         # TFQ differentiator
         #differentiator = tfq.differentiators.ParameterShift()
@@ -280,11 +282,11 @@ class QuantumInput(HermitianLabels):
             q_data_input,
             # The PQC layer returns the expected value of the readout gate, range [-1,1].
             self.expectation_layer,
-            tf.keras.layers.Dense(self.n_classes, activation="sigmoid")
+            tf.keras.layers.Dense(self.n_classes, activation="softmax")
         ])
 
         # Optimizer for update parameters of the 'quantum model'
-        lr_sched = tf.keras.optimizers.schedules.ExponentialDecay(1e-2, steps_decay, 0.9)
+        lr_sched = tf.keras.optimizers.schedules.ExponentialDecay(lr, steps_decay, 0.9)
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr_sched)
 
         # Loss of the keras model
