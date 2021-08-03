@@ -13,7 +13,7 @@ make_dirs(train_dir)
 make_dirs(val_dir)
 dirs_dict = {"train":train_dir,"val":val_dir}
 data_obj = DataImageLoaders(data_dir="_data/hymenoptera_data")
-data_obj.CIFAR10_dataloaders(batch_size=64, num_classes=2)
+data_obj.CIFAR10_dataloaders(batch_size=64, num_classes=4)
 img_batch, c = next(iter(data_obj.dataloaders["train"]))
 model = mobilenet_v2(pretrained=True)
 model.eval()
