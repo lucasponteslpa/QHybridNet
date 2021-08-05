@@ -47,8 +47,8 @@ make_dirs(res_dir)
 if sys.argv[1]!='digits':
     qmodel = QuantumInput((data_train[:5000,:512], labels_train[:5000]),
                           (data_val[:1500,:512], labels_val[:1500]),
-                        list(range(4)),
-                        10,
+                        list(range(2)),
+                        6,
                         pca_dim=None,
                         num_measurements = None,
                         layer_type=0)
@@ -60,7 +60,7 @@ else:
                           pca_dim=None,
                           num_measurements = None,
                           layer_type=0)
-qmodel.training(batch_size=8, epochs=20, lr=1e-1, steps_decay=50)
+qmodel.training(batch_size=8, epochs=5, lr=1e-1, steps_decay=50)
 np.save(os.path.join(res_dir,'train_loss'),qmodel.train.history['loss'])
 np.save(os.path.join(res_dir,'train_acc'),qmodel.train.history['accuracy'])
 np.save(os.path.join(res_dir,'val_loss'),qmodel.train.history['val_loss'])
